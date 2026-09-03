@@ -14,6 +14,9 @@ Findo is a blazingly fast, lightweight file search tool built from the ground up
 - Blistering fast cross-platform speed
 - Portable & Privacy-First
 
+## Benchmark
+Findo searches a 214 GB filesystem in ~20 seconds, compared with 2+ minutes for Windows Explorer.
+
 | Feature / Metric | Findo (Rust) | Windows Explorer Search |
 | :--- | :--- | :--- |
 | **Average Search Time (214 GB)** | **~20 seconds** | **2+ minutes** (120+ seconds) |
