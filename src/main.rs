@@ -4,7 +4,6 @@ const DEV_MODE: bool = false; // extra print statements (if thats what you want)
 
 // -------------------CRATES:-------------------
 use jwalk::WalkDir; // file directory crate
-use rayon::prelude::*;
 use std::io;
 use std::path::Path; // multithreading crate
 use std::time::Instant; // for the timer, not really good for anything else
@@ -77,20 +76,25 @@ d88'      d88' d88'   88b`?88P'`88b`?8888P'
             break;
         }
 
+        if cleaned_search.is_empty() {
+            continue;
+        }
+
         let search_lower = cleaned_search.to_lowercase();
+        let search_bytes = search_lower.as_bytes();
 
         let start = Instant::now(); // basically a stopwatch
 
-        let matches: Vec<_> = WalkDir::new(target_folder)
+        let matches: Vec<_> = WalkDir::new(&target_folder)
             .skip_hidden(false)
             .into_iter()
             .filter_map(|e| e.ok())
-            .collect::<Vec<_>>() // Collect only for Rayon distribution
-            .into_par_iter()
             .filter(|entry| {
                 if entry.file_type().is_file() {
-                    let file_name = entry.file_name().to_string_lossy();
-                    file_name.to_lowercase().contains(&search_lower)
+                    let name_bytes = entry.file_name().as_encoded_bytes();
+                    name_bytes
+                        .windows(search_bytes.len())
+                        .any(|w| w.eq_ignore_ascii_case(search_bytes))
                 } else {
                     false
                 }
