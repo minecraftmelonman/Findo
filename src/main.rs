@@ -1,107 +1,48 @@
-mod search; // imports search.rs engine
+mod search;
+mod ui;
 
-// -------------------CONFIG:-------------------
-const CRASH_ON_START: bool = false; // in case you dont want to use it
-const DEV_MODE: bool = false; // extra print statements (if thats what you want)
+use crate::ui::FindoApp;
+use eframe::egui;
 
-// -------------------CRATES:-------------------
-use std::io;
-use std::time::Instant; // for the timer, not really good for anything else
-
-// --------------------TODO:--------------------
-// 8. Add AI recognition for photos, and text.
-// 8. Add the ability for it to run using
-// 8.   using Ollama/Groq API keys easily
-// 8. LINUX SUPPORT!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// 8. An actual UI
-// 8.
-// 8.
-// 8.
-// 8.
-
-fn main() {
-    // --------------------VAR.:--------------------
-    let mut error_code = 404; // fallback error code
-    let mut error_msg = "Item not found";
-    //  (error_code, error_msg) = (404, "Cant find it");
-    //  eprintln!("[WARNING]: Error {}, {}", error_code, error_msg);
-
-    let target_folder = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-    // --------------------CODE:--------------------
-
-    if CRASH_ON_START {
-        (error_code, error_msg) = (0, "Crash on start enabled");
-        eprintln!("[ERROR]: Error {}, {}", error_code, error_msg);
-        return;
-    }
-
-    // avoid making the var over again in the loop
-    // this is also what the user wants to search
-    let mut search_query = String::new();
-
+fn main() -> eframe::Result<()> {
     // whimsy font
     println!(
         r"
 
 
    ,d8888b  d8,                d8b    
-   88P'    `8P                 88P    
+   88P'     `8P                 88P    
 d888888P                      d88  
   ?88'      88b  88bd88b  d888888   d8888b 
   88P       88P  88P' ?8bd8P' ?88  d8P' ?88
  d88       d88  d88   88P88b  ,88b 88b  d88
 d88'      d88' d88'   88b`?88P'`88b`?8888P'
 
-"
+Starting application..."
     );
 
-    println!("Enter the name of your file that you want to search.");
-    println!("Use 'exit' to terminate the program.");
+    let icon_bytes: &[u8] = include_bytes!("assets/Findo.png");
+    let image = image::load_from_memory(icon_bytes)
+        .expect("Failed to load icon")
+        .to_rgba8();
+    let (width, height) = image.dimensions();
 
-    // --------------------MAIN:--------------------
-    loop {
-        search_query.clear();
+    let icon_data = egui::IconData {
+        rgba: image.into_raw(),
+        width,
+        height,
+    };
 
-        // read user input
-        io::stdin()
-            .read_line(&mut search_query)
-            .expect("Please enter a valid file name!");
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([800.0, 600.0])
+            .with_icon(icon_data),
+        ..Default::default()
+    };
 
-        // clean the input
-        let cleaned_search = search_query.trim();
-        // println!("{}", cleaned_search);
-
-        if cleaned_search.eq_ignore_ascii_case("exit") {
-            println!("Goodbye!");
-            break;
-        }
-
-        if cleaned_search.is_empty() {
-            continue;
-        }
-
-        let start = Instant::now(); // basically a stopwatch
-
-        // Call our dedicated search function in search.rs
-        let matches = search::search_files(&target_folder, cleaned_search);
-
-        if DEV_MODE {
-            for path in &matches {
-                println!("Possible path: {:?}", path);
-            }
-        }
-
-        if matches.is_empty() {
-            println!("No files found matching '{}'.", cleaned_search);
-        } else {
-            for path in &matches {
-                println!("Found path: {:?}", path);
-            }
-            println!("Found {} matching file(s).", matches.len());
-        }
-
-        let duration = start.elapsed(); // end of the stopwatch
-        println!("Done scanning!");
-        println!("Time taken: {:.6} seconds", duration.as_secs_f64());
-    }
+    eframe::run_native(
+        "Findo File Search",
+        options,
+        Box::new(|_cc| Box::new(FindoApp::default()) as Box<dyn eframe::App>),
+    )
 }
