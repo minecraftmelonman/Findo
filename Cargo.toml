@@ -6,7 +6,3 @@ edition = "2021"
 [dependencies]
 rayon = "1.10"
 jwalk = "0.8"
-
-[[bin]]
-name = "testing"
-path = "src/examples/testing.rs"

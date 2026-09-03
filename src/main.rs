@@ -1,10 +1,13 @@
 // -------------------CONFIG:-------------------
 const CRASH_ON_START: bool = false; // in case you dont want to use it
-const DEV_MODE: bool = false; // extra print statements (if thats what you want)
+const DEV_MODE: bool = true; // extra print statements (if thats what you want)
+
 // -------------------CRATES:-------------------
-use jwalk::WalkDir;
+use jwalk::WalkDir; // file directory crate
+use rayon::prelude::*;
 use std::io;
-use std::path::Path;
+use std::path::Path; // multithreading crate
+
 // --------------------TODO:--------------------
 // 8. Add AI recognition for photos, and text.
 // 8. Add the ability for it to run using
@@ -73,19 +76,56 @@ d88'      d88' d88'   88b`?88P'`88b`?8888P'
             break;
         }
 
-        // create a directory walker
-        let walker = WalkDir::new(target_folder)
-            .skip_hidden(false);
+        // get the entries
+        let entries: Vec<_> = WalkDir::new(target_folder)
+            .skip_hidden(false)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .collect();
 
-        // optional debug
-        if DEV_MODE { // if true
-            for entry in walker {
-                if let Ok(entry) = entry {
-                    println!("Found path: {:?}", entry.path());
+        // parallel processing
+        let matches: Vec<_> = entries
+            .par_iter()
+            .filter(|entry| {
+                // check ONLY files, not directories
+                if entry.file_type().is_file() {
+                    let file_name = entry.file_name().to_string_lossy();
+                    // make it case insensitive
+                    file_name
+                        .to_lowercase()
+                        .contains(&cleaned_search.to_lowercase())
+                } else {
+                    false
+                }
+            })
+            .map(|entry| entry.path())
+            .collect();
+
+        // printing takes more time, so add an option
+        if DEV_MODE {
+            for path in &matches {
+                // having an if statement inside of the for loop is expensive,
+                // so do it outside
+                println!("Found: {:?}", path);
+            }
+
+            println!("Found {} matching file(s).", matches.len());
+        } else {
+            // NOT dev mode, so dont print it
+            if !matches.is_empty() {
+                for path in &matches {
+                    let mut current_match: Option<String> =
+                        Some(path.to_string_lossy().to_string());
+
+                    if let Some(val) = &current_match {
+                        if val.to_lowercase().contains(&cleaned_search.to_lowercase()) {
+                            println!("Found: {:?}", path);
+                        }
+                    }
                 }
             }
         }
 
-        println!("Done!");
+        println!("Done scanning!");
     }
 }
