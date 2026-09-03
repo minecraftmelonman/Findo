@@ -1,11 +1,11 @@
+mod search; // imports search.rs engine
+
 // -------------------CONFIG:-------------------
 const CRASH_ON_START: bool = false; // in case you dont want to use it
 const DEV_MODE: bool = false; // extra print statements (if thats what you want)
 
 // -------------------CRATES:-------------------
-use jwalk::WalkDir; // file directory crate
 use std::io;
-use std::path::Path; // multithreading crate
 use std::time::Instant; // for the timer, not really good for anything else
 
 // --------------------TODO:--------------------
@@ -13,7 +13,7 @@ use std::time::Instant; // for the timer, not really good for anything else
 // 8. Add the ability for it to run using
 // 8.   using Ollama/Groq API keys easily
 // 8. LINUX SUPPORT!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// 8.
+// 8. An actual UI
 // 8.
 // 8.
 // 8.
@@ -26,13 +26,13 @@ fn main() {
     //  (error_code, error_msg) = (404, "Cant find it");
     //  eprintln!("[WARNING]: Error {}, {}", error_code, error_msg);
 
-    let target_folder = Path::new("C:\\Users\\sungk");
+    let target_folder = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
     // --------------------CODE:--------------------
 
     if CRASH_ON_START {
         (error_code, error_msg) = (0, "Crash on start enabled");
         eprintln!("[ERROR]: Error {}, {}", error_code, error_msg);
-        return ();
+        return;
     }
 
     // avoid making the var over again in the loop
@@ -80,27 +80,10 @@ d88'      d88' d88'   88b`?88P'`88b`?8888P'
             continue;
         }
 
-        let search_lower = cleaned_search.to_lowercase();
-        let search_bytes = search_lower.as_bytes();
-
         let start = Instant::now(); // basically a stopwatch
 
-        let matches: Vec<_> = WalkDir::new(&target_folder)
-            .skip_hidden(false)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|entry| {
-                if entry.file_type().is_file() {
-                    let name_bytes = entry.file_name().as_encoded_bytes();
-                    name_bytes
-                        .windows(search_bytes.len())
-                        .any(|w| w.eq_ignore_ascii_case(search_bytes))
-                } else {
-                    false
-                }
-            })
-            .map(|entry| entry.path())
-            .collect();
+        // Call our dedicated search function in search.rs
+        let matches = search::search_files(&target_folder, cleaned_search);
 
         if DEV_MODE {
             for path in &matches {
