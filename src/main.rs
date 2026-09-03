@@ -1,12 +1,13 @@
 // -------------------CONFIG:-------------------
 const CRASH_ON_START: bool = false; // in case you dont want to use it
-const DEV_MODE: bool = true; // extra print statements (if thats what you want)
+const DEV_MODE: bool = false; // extra print statements (if thats what you want)
 
 // -------------------CRATES:-------------------
 use jwalk::WalkDir; // file directory crate
 use rayon::prelude::*;
 use std::io;
 use std::path::Path; // multithreading crate
+use std::time::Instant; // for the timer, not really good for anything else
 
 // --------------------TODO:--------------------
 // 8. Add AI recognition for photos, and text.
@@ -26,7 +27,7 @@ fn main() {
     //  (error_code, error_msg) = (404, "Cant find it");
     //  eprintln!("[WARNING]: Error {}, {}", error_code, error_msg);
 
-    let target_folder = Path::new("C:\\Users\\sungk\\Downloads\\");
+    let target_folder = Path::new("C:\\Users\\sungk");
     // --------------------CODE:--------------------
 
     if CRASH_ON_START {
@@ -65,7 +66,7 @@ d88'      d88' d88'   88b`?88P'`88b`?8888P'
         // read user input
         io::stdin()
             .read_line(&mut search_query)
-            .expect("Please enter a valid directory!");
+            .expect("Please enter a valid file name!");
 
         // clean the input
         let cleaned_search = search_query.trim();
@@ -76,24 +77,20 @@ d88'      d88' d88'   88b`?88P'`88b`?8888P'
             break;
         }
 
-        // get the entries
-        let entries: Vec<_> = WalkDir::new(target_folder)
+        let search_lower = cleaned_search.to_lowercase();
+
+        let start = Instant::now(); // basically a stopwatch
+
+        let matches: Vec<_> = WalkDir::new(target_folder)
             .skip_hidden(false)
             .into_iter()
             .filter_map(|e| e.ok())
-            .collect();
-
-        // parallel processing
-        let matches: Vec<_> = entries
-            .par_iter()
+            .collect::<Vec<_>>() // Collect only for Rayon distribution
+            .into_par_iter()
             .filter(|entry| {
-                // check ONLY files, not directories
                 if entry.file_type().is_file() {
                     let file_name = entry.file_name().to_string_lossy();
-                    // make it case insensitive
-                    file_name
-                        .to_lowercase()
-                        .contains(&cleaned_search.to_lowercase())
+                    file_name.to_lowercase().contains(&search_lower)
                 } else {
                     false
                 }
@@ -101,31 +98,23 @@ d88'      d88' d88'   88b`?88P'`88b`?8888P'
             .map(|entry| entry.path())
             .collect();
 
-        // printing takes more time, so add an option
         if DEV_MODE {
             for path in &matches {
-                // having an if statement inside of the for loop is expensive,
-                // so do it outside
-                println!("Found: {:?}", path);
-            }
-
-            println!("Found {} matching file(s).", matches.len());
-        } else {
-            // NOT dev mode, so dont print it
-            if !matches.is_empty() {
-                for path in &matches {
-                    let mut current_match: Option<String> =
-                        Some(path.to_string_lossy().to_string());
-
-                    if let Some(val) = &current_match {
-                        if val.to_lowercase().contains(&cleaned_search.to_lowercase()) {
-                            println!("Found: {:?}", path);
-                        }
-                    }
-                }
+                println!("Possible path: {:?}", path);
             }
         }
 
+        if matches.is_empty() {
+            println!("No files found matching '{}'.", cleaned_search);
+        } else {
+            for path in &matches {
+                println!("Found path: {:?}", path);
+            }
+            println!("Found {} matching file(s).", matches.len());
+        }
+
+        let duration = start.elapsed(); // end of the stopwatch
         println!("Done scanning!");
+        println!("Time taken: {:.6} seconds", duration.as_secs_f64());
     }
 }
